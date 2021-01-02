@@ -3,6 +3,10 @@ function enable_rails () {
     dnf -y install rubygem-rails sqlite-devel libsass node yarnpkg 
     yarn global add webpack
 
+    # enable rails default development port
+    firewall-cmd --add-port=3000/tcp --zone=public --permanent
+    firewall-cmd reload
+
     sqlplus system/\$ORACLE_PASSWORD@XEPDB1 << EOF
     CREATE TABLESPACE testdevtbs
     DATAFILE '/opt/oracle/oradata/XE/XEPDB1/testdevtbs001.dbf' 
@@ -24,12 +28,14 @@ EOF
     DEFAULT TABLESPACE
         testdevtbs
     TEMPORARY TABLESPACE
-        testdevtmptbs
+        TEMP
     PROFILE
         DEFAULT
     ;
+    -- testdevtmptbs
     GRANT CREATE SESSION,CREATE TABLE,CREATE SEQUENCE to railsdev;
     ALTER USER railsdev ACCOUNT UNLOCK;
+    ALTER USER railsdev QUOTA 10M ON testdevtbs;
 EOF
     sqlplus system/\$ORACLE_PASSWORD@XEPDB1 << EOF
     CREATE USER railstest IDENTIFIED BY railstest
@@ -65,6 +71,10 @@ EOF
 
 function enable_django () {
     dnf -y install python3-django
+
+    # enable django default development port
+    firewall-cmd --add-port=8000/tcp --zone=public --permanent
+    firewall-cmd reload
 }
 
 function enable_dotnetcore () {
@@ -76,6 +86,13 @@ function enable_dotnetcore () {
 function enable_koajs () {
     dnf -y install yarnpkg
     yarn global add koa
+}
+
+function enable_django_secretkey () {
+    python3 << EOF
+from django.core.management.utils import get_random_secret_key
+print(get_random_secret_key())
+EOF
 }
 
 END
